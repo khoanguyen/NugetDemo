@@ -1,4 +1,4 @@
 NugetDemo
 =========
 
-Demo for Nuget package
+Demo for using Nuget
