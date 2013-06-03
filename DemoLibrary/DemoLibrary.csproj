@@ -33,6 +33,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.Entity" />
     <Reference Include="System.ServiceModel" />
@@ -43,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ProfilerBehaviorExtensionElement.cs" />
     <Compile Include="ProfilingOperationInvoker.cs" />
     <Compile Include="ServiceProfiler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

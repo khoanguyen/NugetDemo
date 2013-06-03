@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NugetDemo", "NugetDemo\NugetDemo.csproj", "{C758682A-0B1B-498F-88DB-36439ADD2B91}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6BC65B99-5BA0-4E5F-A58F-0A93D60161B4} = {6BC65B99-5BA0-4E5F-A58F-0A93D60161B4}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoLibrary", "DemoLibrary\DemoLibrary.csproj", "{B093A512-BEEA-45E1-AA02-795FC8B8C75E}"
 EndProject
