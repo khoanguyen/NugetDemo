@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ServiceModel;
 using System.Text;
 using System.ServiceModel.Dispatcher;
 using System.IO;
@@ -10,17 +11,24 @@ namespace DemoLibrary
 {
     public class ProfilingOperationInvoker : IOperationInvoker
     {
+        private static object _gate = new object();
         private readonly DispatchOperation _operation;
         private readonly IOperationInvoker _original;
+        private static readonly Dictionary<string, StreamWriter> _outputWriters;
 
         public string OutputPath { get; set; }
+
+        static ProfilingOperationInvoker()
+        {
+            _outputWriters = new Dictionary<string, StreamWriter>();
+        }
 
         public ProfilingOperationInvoker(DispatchOperation dispatchOperation, string outputPath)
         {
             _operation = dispatchOperation;
             _original = dispatchOperation.Invoker;
             IsSynchronous = _original.IsSynchronous;
-            OutputPath = outputPath;
+            OutputPath = outputPath;            
         }
 
         public object[] AllocateInputs()
@@ -30,15 +38,16 @@ namespace DemoLibrary
 
         public object Invoke(object instance, object[] inputs, out object[] outputs)
         {
-            using (var writer = GetWriter())
+            var writer = GetWriter(OutputPath);
+            var stopWatch = Stopwatch.StartNew();
+            var result = _original.Invoke(instance, inputs, out outputs);
+            stopWatch.Stop();
+            lock (writer)
             {
-                var stopWatch = Stopwatch.StartNew();
-                var result = _original.Invoke(instance, inputs, out outputs);
-                stopWatch.Stop();
                 WriteLog(writer, stopWatch);
                 writer.Flush();
-                return result;
             }
+            return result;
         }
 
         public IAsyncResult InvokeBegin(object instance, object[] inputs, AsyncCallback callback, object state)
@@ -57,27 +66,34 @@ namespace DemoLibrary
             private set;
         }
 
-        private StreamWriter GetWriter()
+        private StreamWriter GetWriter(string output)
         {
-            var fs = File.Exists(OutputPath) ?
-                File.Open(OutputPath, FileMode.Append) :
-                File.Open(OutputPath, FileMode.CreateNew);
+            if (_outputWriters.ContainsKey(output)) return _outputWriters[output];
+            lock (_gate)
+            {
+                if (_outputWriters.ContainsKey(output)) return _outputWriters[output];
+                var fs = File.Exists(OutputPath)
+                             ? File.Open(OutputPath, FileMode.Append, FileAccess.Write, FileShare.Read)
+                             : File.Open(OutputPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
 
-            return new StreamWriter(fs);                
+                _outputWriters[output] = new StreamWriter(fs);
+            }
+            return _outputWriters[output];
         }
 
         private void WriteLog(StreamWriter writer, Stopwatch stopwatch)
         {
-            writer.WriteLine(string.Format("{0}.{1},{2}",
-                                _operation.Parent
-                                          .EndpointDispatcher
-                                          .ChannelDispatcher
-                                          .Host
-                                          .Description
-                                          .ServiceType
-                                          .FullName,
-                                _operation.Name,
-                                stopwatch.ElapsedMilliseconds));
+            writer.WriteLine("{0}.{1},{2},{3}",
+                             _operation.Parent
+                                         .EndpointDispatcher
+                                         .ChannelDispatcher
+                                         .Host
+                                         .Description
+                                         .ServiceType
+                                         .FullName,
+                             _operation.Name,
+                             OperationContext.Current.RequestContext.RequestMessage.Properties.Via,
+                             stopwatch.ElapsedMilliseconds);
         }
     }
 }
